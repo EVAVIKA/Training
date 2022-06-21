@@ -1,58 +1,77 @@
-import pygame 
-import sys 
+from numpy import place
+import pygame
+import sys
+from object import *
+import random 
 
-def get_player_obj(screen, posX, posY):
-    color = (255, 255, 0)
-    h = 50 
-    w = 50
-    pygame.draw.rect(screen, color, (posX, posY, w, h)) 
-    return (posX, posY, w, h)
+class Logic:
+    def __init__(self, screen, speed):
+        self.player = Player(screen)
+        self.platform = Platform(screen)
+        self.screen = screen
+        self.speed = speed
+        
+    def on_update(self):
+        self.player.render()
+        self.rener_platforms()
+        self.move_platforms()
+        self.try_destroy_platform()
+        self.try_create_platform()
 
-def get_platform(screen, posX, posY):
-    color = (255, 255, 255)
-    h = 220
-    w = 50
-    pygame.draw.rect(screen, color, (posX, posY, w, h))
-    return (posX, posY, w, h)
+    def rener_platforms(self):
+        for platform in ObjectEngine.all_objects:
+            platform.render()
 
-def collision(obj1, obj2):
-    Obj1LeftBot = (obj1[0], obj1[1] + obj1[3])
-    Obj1RightBot = (obj1[0] + obj1[2], obj1[1] + obj1[3])
-    
-    Obj2LeftTop = (obj2[0], obj2[1])
-    Obj2RightTop = (obj2[0] + obj2[2], obj2[1])
-    
-    return Obj1LeftBot[1] >= Obj2LeftTop[1] and (Obj1RightBot[0] >= Obj2LeftTop[0] or Obj1LeftBot[0] <= Obj2RightTop[0])
-    
-    
-    
+    def move_platforms(self):
+        for platform in ObjectEngine.all_objects:
+            platform.posX -= self.speed
+
+    def try_destroy_platform(self):
+        try:
+            platform = ObjectEngine.all_objects[0]
+            if platform.posX <= -platform.w:
+                platform.destroy()
+        except:
+            return
+
+    def try_create_platform(self):
+        while len(ObjectEngine.all_objects) < 9:
+            self.generate_platform()
+
+    def generate_platform(self):
+        new_platform = Platform(self.screen)
+        min_y = 250
+        max_y = 500
+        min_bias_X = 100
+        max_bias_X = 150
+        new_platform.posY = random.uniform(min_y, max_y)
+        new_platform.posX = ObjectEngine.all_objects[-2].posX + random.uniform(min_bias_X, max_bias_X)
+        return new_platform
 
 def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
+    logic = Logic(screen, 1)
     pygame.display.set_caption('Square')
     background_color = (0, 0, 0)
-    playePos = (20, 20)
-    platformPos = (20, 400)
-    gravity = 2
     run = True
-    
     clock = pygame.time.Clock()
-    
+
     while run:
         for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    logic.player.jump()
             if event.type == pygame.QUIT:
                 run = False
                 sys.exit()
-    
-        
         screen.fill(background_color)
-        playePos = get_player_obj(screen, playePos[0], playePos[1])
-        platformPos = get_platform(screen, platformPos[0], platformPos[1])
-        if not collision(playePos, platformPos): playePos = (playePos[0], playePos[1] + gravity)         
+
+        logic.on_update()
+
         pygame.display.update()
         clock.tick(60)
-        
-    
+
+
 if __name__ == '__main__':
     main()
